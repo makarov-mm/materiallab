@@ -217,7 +217,7 @@ namespace material {
         GL gl;
         std::unique_ptr<Simulator> sim;
         Camera camera;
-        HWND window{}, status{}, pauseButton{}, combos[5]{}, sliders[4]{}, labels[4]{};
+        HWND window{}, viewport{}, status{}, pauseButton{}, combos[5]{}, sliders[4]{}, labels[4]{};
         HFONT font{};
         bool running = true, paused{}, single{}, orbit{}, drag{};
         POINT previous{};
@@ -302,6 +302,8 @@ namespace material {
             GetClientRect(window, &rect);
             width = rect.right;
             height = rect.bottom;
+            if (viewport)
+                MoveWindow(viewport, panel, 0, std::max(1, width - panel), std::max(1, height - 64), TRUE);
             if (status)
                 MoveWindow(status, panel + 12, height - 58, std::max(1, width - panel - 24), 54, TRUE);
         }
@@ -382,19 +384,14 @@ namespace material {
             orbit = false;
             if (sim)
                 sim->settings.dragging = false;
-            ReleaseCapture();
+            if (GetCapture() == window)
+                ReleaseCapture();
         }
         void draw() {
             int w = std::max(1, width - panel), h = std::max(1, height - 64);
-            glViewport(0, 0, width, height);
+            glViewport(0, 0, w, h);
             glClearColor(.012f, .018f, .032f, 1);
             glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            glEnable(GL_SCISSOR_TEST);
-            glScissor(0, 0, panel, height);
-            glClearColor(246.f / 255, 248.f / 255, 252.f / 255, 1);
-            glClear(GL_COLOR_BUFFER_BIT);
-            glDisable(GL_SCISSOR_TEST);
-            glViewport(panel, 64, w, h);
             sim->draw(camera, w, h);
         }
         void updateStatus() {
@@ -518,7 +515,7 @@ namespace material {
                     out << "Gravity response: " << (fell ? "PASS" : "FAIL") << "\n";
                     ok = fell && ok;
                     app.draw();
-                    capture(app.gl, folder / std::format("Material3D-{}.bmp", material), panel, 64,
+                    capture(app.gl, folder / std::format("Material3D-{}.bmp", material), 0, 0,
                         app.width - panel, app.height - 64);
                     SwapBuffers(app.gl.dc);
                 }
@@ -596,7 +593,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
         Application app;
         WNDCLASSEXW wc{};
         wc.cbSize = sizeof(wc);
-        wc.style = CS_OWNDC;
         wc.lpfnWndProc = procedure;
         wc.hInstance = instance;
         wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
@@ -609,10 +605,12 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
             960, nullptr, nullptr, instance, &app);
         if (!hwnd)
             throw std::runtime_error("Window creation failed.");
-        app.gl.initialize(hwnd);
-        app.sim = std::make_unique<Simulator>(app.gl);
         app.controls();
         modern::apply(hwnd, panel, 284, L"Material Lab", L"Materials in motion");
+        app.viewport = modern::createViewport(hwnd, panel);
+        app.gl.initialize(app.viewport);
+        app.sim = std::make_unique<Simulator>(app.gl);
+        app.updateSliders();
         app.resize();
         ShowWindow(hwnd, (smoke || test) ? SW_SHOWNOACTIVATE : show);
         if (test)
@@ -679,7 +677,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR commandLine, int show) 
                 bool ok = validate(*app.sim, out, "3D GPU smoke");
                 auto error = glGetError();
                 out << "OpenGL error: " << error << "\n";
-                capture(app.gl, folder / "Lab01.bmp", panel, 64, app.width - panel, app.height - 64);
+                capture(app.gl, folder / "Lab01.bmp", 0, 0, app.width - panel, app.height - 64);
                 return ok && error == 0 ? 0 : 1;
             }
             SwapBuffers(app.gl.dc);

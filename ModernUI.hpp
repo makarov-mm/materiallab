@@ -7,6 +7,7 @@
 #include <dwmapi.h>
 #include <uxtheme.h>
 #include <algorithm>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -227,6 +228,12 @@ namespace modern {
     inline LRESULT CALLBACK controlProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l, UINT_PTR id, DWORD_PTR ref) {
         auto& c = *reinterpret_cast<Control*>(ref);
         if (!c.surface->highContrast) {
+            if (msg == WM_SETTEXT && c.kind == Kind::label) {
+                // Store the new text without letting STATIC draw an intermediate native frame.
+                auto result = DefWindowProcW(hwnd, msg, w, l);
+                InvalidateRect(hwnd, nullptr, FALSE);
+                return result;
+            }
             if (msg == WM_ERASEBKGND)
                 return 1;
             if (msg == WM_PAINT) {
@@ -356,8 +363,46 @@ namespace modern {
         }
         return DefWindowProcW(hwnd, msg, w, l);
     }
+    inline LRESULT CALLBACK viewportProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l) {
+        // Keep the existing mouse and camera handlers on the parent window.
+        if (msg == WM_NCHITTEST)
+            return HTTRANSPARENT;
+        if (msg == WM_ERASEBKGND)
+            return 1;
+        return DefWindowProcW(hwnd, msg, w, l);
+    }
+    inline HWND createViewport(HWND root, int sidebarWidth) {
+        WNDCLASSW wc{};
+        wc.style = CS_OWNDC;
+        wc.lpfnWndProc = viewportProc;
+        wc.hInstance = GetModuleHandleW(nullptr);
+        wc.lpszClassName = L"PhysicsLab.Viewport";
+        if (!RegisterClassW(&wc) && GetLastError() != ERROR_CLASS_ALREADY_EXISTS)
+            throw std::runtime_error("Cannot register the OpenGL viewport.");
+        RECT r{};
+        GetClientRect(root, &r);
+        auto hwnd = CreateWindowExW(0, wc.lpszClassName, L"", WS_CHILD | WS_VISIBLE | WS_CLIPSIBLINGS,
+            sidebarWidth, 0, std::max(1L, r.right - sidebarWidth), std::max(1L, r.bottom - 64),
+            root, nullptr, wc.hInstance, nullptr);
+        if (!hwnd)
+            throw std::runtime_error("Cannot create the OpenGL viewport.");
+        return hwnd;
+    }
     inline LRESULT CALLBACK rootProc(HWND hwnd, UINT msg, WPARAM w, LPARAM l, UINT_PTR id, DWORD_PTR ref) {
         auto& s = *reinterpret_cast<Surface*>(ref);
+        if (msg == WM_PAINT) {
+            PAINTSTRUCT ps{};
+            HDC dc = BeginPaint(hwnd, &ps);
+            RECT r{};
+            GetClientRect(hwnd, &r);
+            RECT sidebar{0, 0, s.width, r.bottom};
+            FillRect(dc, &sidebar, s.highContrast ? GetSysColorBrush(COLOR_WINDOW) : s.panelBrush);
+            RECT footer{s.width, r.bottom - 64, r.right, r.bottom};
+            SetDCBrushColor(dc, s.highContrast ? GetSysColor(COLOR_WINDOW) : canvas);
+            FillRect(dc, &footer, static_cast<HBRUSH>(GetStockObject(DC_BRUSH)));
+            EndPaint(hwnd, &ps);
+            return 0;
+        }
         if ((msg == WM_LBUTTONDOWN || msg == WM_RBUTTONDOWN) && GET_X_LPARAM(l) >= s.width)
             SetFocus(hwnd);
         if (msg == WM_CTLCOLORSTATIC || msg == WM_CTLCOLORBTN || msg == WM_CTLCOLORLISTBOX)

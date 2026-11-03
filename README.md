@@ -2,15 +2,15 @@
 
 ![](screenshot.png)
 
-**Interface update:** This project uses the shared modern WinAPI interface: flat themed controls, scrollable settings and keyboard navigation. See [Modern UI](../../MODERN_UI.md). Simulation shortcuts apply when the 3D canvas has focus; focused controls use their native keys.
+**Interface update:** This project uses the shared modern WinAPI interface: flat themed controls, scrollable settings and keyboard navigation. Simulation shortcuts apply when the 3D canvas has focus; focused controls use their native keys.
 
 A native Windows laboratory for three-dimensional deformable materials. The complete simulation runs in OpenGL 4.3 compute shaders. C++23 supplies the WinAPI interface, camera, WGL context, dispatch scheduling and diagnostics. No third-party library, package manager, model, texture or external shader file is required.
 
 ## Build and run
 
-Open **MaterialLab3D.sln** at the repository root with Visual Studio 2026, select **Release | x64**, build and run 01_MaterialLab. Install the Desktop development with C++ workload, MSVC v145 and a Windows SDK. The full PhysicsLab.sln also builds the 3D application as its first project.
+The Windows x64 executable is `bin/x64/Release/MaterialLab.exe`. It requires an OpenGL 4.3 Core driver.
 
-Alternatively run BuildMaterial3D.ps1. The executable is bin/x64/Release/01_MaterialLab.exe. The build uses C++23 preview mode on MSVC 14.51, a static C++ runtime, and Windows system import libraries only. Debug information uses /Z7 to avoid a compiler PDB server. An OpenGL 4.3-capable driver and a desktop large enough for the minimum 1040 × 920 window are required.
+To rebuild, open `MaterialLab.slnx` in Visual Studio 2026 with Desktop development with C++, the v145 toolset and a Windows SDK. Select **Release | x64** and build the solution. The minimum window size is 1080 × 760.
 
 ## Materials and scenes
 
@@ -67,11 +67,11 @@ The status panel reports active particles, GPU physics time from timer queries, 
 
 ## Verification
 
-Run **TestMaterial3D.ps1** to test the actual compute shaders. The suite covers all nine material/scene combinations, both particle-count extremes at maximum stiffness/gravity/friction, mass transfer, finite state, gravity response, zero-gravity symmetry, cutting, picking and GL errors. Full-buffer readback is used only in tests. Results are in Validation3D/Material3D-tests.txt and Validation3D/REPORT.md.
+Run `MaterialLab.exe --gpu-test` to test the compute shaders. The suite covers all nine material/scene combinations, both particle-count extremes at maximum stiffness/gravity/friction, mass transfer, finite state, gravity response, zero-gravity symmetry, cutting, picking and GL errors. Full-buffer readback is used only in tests. The suite writes `Material3D-tests.txt` to the working directory.
 
 The executable also accepts --smoke (120 simulation ticks, a BMP and a report) and --gpu-test (extended suite). Both write to their working directory and return nonzero on failure. They require a working OpenGL desktop context.
 
-The collection's old Simulation.cpp remains a CPU 2D reference for LabTests. It is not linked into this 3D application and is excluded from the standalone 3D archive.
+The collection's old Simulation.cpp remains a CPU 2D reference for LabTests. It is not linked into this 3D application.
 
 ## Numerical scope
 
