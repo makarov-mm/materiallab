@@ -2,5 +2,5 @@
   <Configurations>
     <Platform Name="x64" />
   </Configurations>
-  <Project Path="01_MaterialLab.vcxproj" />
+  <Project Path="MaterialLab.vcxproj" Id="69df036c-39f3-42ba-9840-150e9ae796d0" />
 </Solution>

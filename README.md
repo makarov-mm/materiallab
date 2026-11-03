@@ -1,5 +1,7 @@
 # Material Lab — 3D GPU Edition
 
+![](screenshot.png)
+
 **Interface update:** This project uses the shared modern WinAPI interface: flat themed controls, scrollable settings and keyboard navigation. See [Modern UI](../../MODERN_UI.md). Simulation shortcuts apply when the 3D canvas has focus; focused controls use their native keys.
 
 A native Windows laboratory for three-dimensional deformable materials. The complete simulation runs in OpenGL 4.3 compute shaders. C++23 supplies the WinAPI interface, camera, WGL context, dispatch scheduling and diagnostics. No third-party library, package manager, model, texture or external shader file is required.

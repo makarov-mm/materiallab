@@ -233,4 +233,4 @@ namespace material {
         }
     };
 #undef FN
-} // namespace material
+}
