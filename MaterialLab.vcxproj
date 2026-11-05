@@ -13,9 +13,8 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{69DF036C-39F3-42BA-9840-150E9AE796D0}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
-    <RootNamespace>01_MaterialLab</RootNamespace>
+    <RootNamespace>MaterialLab</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
-    <ProjectName>MaterialLab</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Label="Configuration">
@@ -27,19 +26,27 @@
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <Import Project="Common.props" />
   <ItemDefinitionGroup>
-    <ClCompile>
-      <PreprocessorDefinitions>LAB_ID=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ClCompile>
     <Link>
       <SubSystem>Windows</SubSystem>
+      <AdditionalDependencies>%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="Material3D.cpp" />
-    <ClInclude Include="GpuApi.hpp" />
-    <ClInclude Include="ModernUI.hpp" />
-    <ClInclude Include="Math3D.hpp" />
+    <ClCompile Include="App.cpp" />
+    <ClCompile Include="Main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="App.hpp" />
     <ClInclude Include="Shaders.hpp" />
+    <ClInclude Include="GpuApi.hpp" />
+    <ClInclude Include="Math3D.hpp" />
+    <ClInclude Include="Model.hpp" />
+    <ClInclude Include="ModernUI.hpp" />
+    <ClInclude Include="Simulation.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Build.ps1" />
+    <None Include="Common.props" />
     <None Include="README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

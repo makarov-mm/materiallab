@@ -2,15 +2,15 @@
 
 ![](screenshot.png)
 
-**Interface update:** This project uses the shared modern WinAPI interface: flat themed controls, scrollable settings and keyboard navigation. Simulation shortcuts apply when the 3D canvas has focus; focused controls use their native keys.
+The settings column uses native Windows controls with flat themed painting, scrolling and keyboard navigation (`ModernUI.hpp`); OpenGL renders into a child viewport window right of it. Simulation shortcuts apply when the 3D canvas has focus; focused controls use their native keys.
 
-A native Windows laboratory for three-dimensional deformable materials. The complete simulation runs in OpenGL 4.3 compute shaders. C++23 supplies the WinAPI interface, camera, WGL context, dispatch scheduling and diagnostics. No third-party library, package manager, model, texture or external shader file is required.
+A native Windows laboratory for three-dimensional deformable materials. The complete simulation (MLS-MPM with APIC transfers) runs in OpenGL 4.3 compute shaders. C++23 supplies the WinAPI interface, camera, WGL context, dispatch scheduling and diagnostics. No third-party library, package manager, model, texture or external shader file is required.
 
 ## Build and run
 
 The Windows x64 executable is `bin/x64/Release/MaterialLab.exe`. It requires an OpenGL 4.3 Core driver.
 
-To rebuild, open `MaterialLab.slnx` in Visual Studio 2026 with Desktop development with C++, the v145 toolset and a Windows SDK. Select **Release | x64** and build the solution. The minimum window size is 1080 × 760.
+To rebuild, open `MaterialLab.slnx` in Visual Studio 2026 with Desktop development with C++, the v145 toolset and a Windows SDK. Select **Release | x64** and build the solution, or run `./Build.ps1` (add `-Configuration Debug` for a Debug build). Both configurations use the static Microsoft C++ runtime and compile at warning level 4. The minimum window size is 1080 × 760; the default is 1360 × 1000.
 
 ## Materials and scenes
 
@@ -57,7 +57,9 @@ The GPU computes the 3D SVD using five Jacobi sweeps on FᵀF. Every dispatch en
 
 OpenGL 4.3 does not require native float atomic addition. P2G therefore implements atomic float sums with integer atomicCompSwap on SSBO words, including an atomic initial read. No vendor extension is required. This avoids fixed-point quantization and accumulation range limits. Concurrent summation order can vary, so results are not bitwise deterministic across runs or GPUs.
 
-The fixed time step is 1/1200 second. Twenty substeps form a nominal 60 Hz simulation tick. Slow hardware slows simulated time rather than increasing the integration step. All physics runs on the GPU, including Debug builds; there is no CPU solver fallback.
+The fixed time step is 1/1200 second. Twenty substeps form a nominal 60 Hz simulation tick. The main loop accumulates real time and runs one tick per elapsed 1/60 s, at most one per rendered frame, so slow hardware slows simulated time rather than increasing the integration step. All physics runs on the GPU, including Debug builds; there is no CPU solver fallback.
+
+Parameters reach the shaders through two `std140` uniform blocks, `Params` (particle count, material, scene, tool, brush, stiffness, gravity, friction, time and the picking ray; 112 bytes) and `View` (camera matrices; 128 bytes), mirrored by `material::Params` and `material::ViewParams` in `Model.hpp`. `Params` is uploaded once per substep, so the kinematic press and the tool see the current substep time and cursor position.
 
 ## Rendering and diagnostics
 
@@ -65,24 +67,20 @@ Instanced sphere impostors read particle positions directly from the SSBO. The f
 
 The status panel reports active particles, GPU physics time from timer queries, render FPS, simulated time, maximum speed, invalid states, speed caps and boundary corrections. A 64-byte diagnostics buffer is read twice per second. Error/correction counts accumulate until reset. Invalid state pauses interactive simulation at the next diagnostic check. Speed is capped at 8; final position clamping is an additional reported safeguard.
 
-## Verification
-
-Run `MaterialLab.exe --gpu-test` to test the compute shaders. The suite covers all nine material/scene combinations, both particle-count extremes at maximum stiffness/gravity/friction, mass transfer, finite state, gravity response, zero-gravity symmetry, cutting, picking and GL errors. Full-buffer readback is used only in tests. The suite writes `Material3D-tests.txt` to the working directory.
-
-The executable also accepts --smoke (120 simulation ticks, a BMP and a report) and --gpu-test (extended suite). Both write to their working directory and return nonzero on failure. They require a working OpenGL desktop context.
-
-The collection's old Simulation.cpp remains a CPU 2D reference for LabTests. It is not linked into this 3D application.
-
 ## Numerical scope
 
 This is a fully 3D GPU simulator, not a physically calibrated engineering package. Clay's yield law is an educational approximation. Cutting removes mass rather than modeling fracture energy. Initial sampling uses a regular lattice. There is no watertight surface reconstruction, self-shadowing, adaptive CFL step, sparse grid, export, or mixed-material scene. Subgrid fracture and contact depend on grid resolution. Sphere impostors approximate silhouettes and are intended for particles small relative to camera distance.
 
-## Source map
+## Source files
 
-- Material3D.cpp: dispatch, WinAPI UI, interaction, rendering and GPU tests.
-- Shaders.hpp: embedded GLSL 4.30 compute, vertex and fragment shaders.
-- GpuApi.hpp: WGL/OpenGL loading and resource ownership.
-- Math3D.hpp: camera and projection math.
+- `Main.cpp`: entry point and the fixed-timestep main loop.
+- `App.hpp` / `App.cpp`: native window with the OpenGL viewport child, settings panel, camera and tool interaction, status line.
+- `Simulation.hpp`: GPU resources, the four dispatches per substep, diagnostics, picking and rendering.
+- `Model.hpp`: model constants, `Settings`, `Diagnostics`, the particle record and the uniform-block structs.
+- `Shaders.hpp`: embedded GLSL 4.30 compute, vertex and fragment shaders as chunks.
+- `GpuApi.hpp`: WGL context, the OpenGL 4.3 entry points and enumerants the lab uses, program building.
+- `Math3D.hpp`: camera and perspective math.
+- `ModernUI.hpp`: flat themed painting and scrolling for the native settings controls, plus the OpenGL viewport child.
+- `MaterialLab.vcxproj` / `Common.props` / `Build.ps1`: Visual Studio 2026 C++23 project, shared compiler settings and the command-line build script.
 
-References (not dependencies): [MPM snow](https://www.disneyanimation.com/publications/a-material-point-method-for-snow-simulation/), [MLS-MPM course](https://yuanming.taichi.graphics/publication/2019-mpm-tutorial/mpm-course-2019.pdf), [OpenGL compute](https://wikis.khronos.org/opengl/Compute_Shader), [SSBO atomics](https://wikis.khronos.org/opengl/Shader_Storage_Buffer_Object).
-
+Method references, not dependencies: [MPM snow](https://www.disneyanimation.com/publications/a-material-point-method-for-snow-simulation/), [MLS-MPM course](https://yuanming.taichi.graphics/publication/2019-mpm-tutorial/mpm-course-2019.pdf), [OpenGL compute](https://wikis.khronos.org/opengl/Compute_Shader), [SSBO atomics](https://wikis.khronos.org/opengl/Shader_Storage_Buffer_Object).
